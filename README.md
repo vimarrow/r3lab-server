@@ -1,2 +1,2 @@
-# r3lab-server
-R3lab Node.js Server
+# R<sup>3</sup>lab Server
+R<sup>3</sup>lab Node.js Server
