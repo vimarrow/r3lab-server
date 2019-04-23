@@ -20,6 +20,6 @@
 		"raw-body": "^2.3.3"
 	},
 	"devDependencies": {
-		"mocha": "6.1.3",
+		"mocha": "6.1.3"
 	}
 }
