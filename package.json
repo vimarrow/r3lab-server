@@ -1,0 +1,25 @@
+{
+	"name": "r3lab-server",
+	"version": "0.0.1",
+	"description": "A nodejs webserver",
+	"author": "Andrei Bratuleanu <bratuleanu21@gmail.com>",
+	"license": "ISC",
+	"repository": "https://github.com/andreibratuleanu21/r3lab-server.git",
+	"main": "index.js",
+	"engines": {
+		"node": ">= 7.6.0"
+	},
+	"scripts": {
+		"test": "mocha"
+	},
+	"keywords": [
+		"webserver",
+		"nodejs"
+	],
+	"dependencies": {
+		"raw-body": "^2.3.3"
+	},
+	"devDependencies": {
+		"mocha": "6.1.3",
+	}
+}
