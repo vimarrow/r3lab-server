@@ -34,12 +34,12 @@ class Ping extends Route {
 			// If there is no need to go to the next method you can return false
 		}
 		get() {
-				this.anotherValue = Math.random();
-				// Do the GET logic here.
-				this.status = 200;
-				// set the status of the request before returning any data.
-				// You can also set headers or whatever
-				return { hello: 'world', random: this.computedValue + this.anotherValue };
+			this.anotherValue = Math.random();
+			// Do the GET logic here.
+			this.status = 200;
+			// set the status of the request before returning any data.
+			// You can also set headers or whatever
+			return { hello: 'world', random: this.computedValue + this.anotherValue };
 		}
 
 		post() {
@@ -58,9 +58,9 @@ class Ping extends Route {
 const serverConfig = {
 	// can also add other configs as env
 	routes: [{
-			path: '/ping',
-			// set the URL and assign a controller
-			controller: require('./services/Ping')
+		path: '/ping',
+		// set the URL and assign a controller
+		controller: require('./services/Ping')
 	}]
 };
 
