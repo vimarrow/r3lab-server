@@ -16,7 +16,7 @@ R<sup>3</sup>lab Server requires __node v7.6.0__ or higher for ES2015 and async 
 ```
 $ npm install r3lab-server
 ```
-## Hello R3lab
+## Hello R<sup>3</sup>lab
 
 ```js
 const { Server, Route } = require('r3lab-server');
@@ -37,12 +37,13 @@ class Ping extends Route {
 				this.anotherValue = Math.random();
 				// Do the GET logic here.
 				this.status = 200;
-				// set the status of the request before returning any data. You can also set headers or whatever
+				// set the status of the request before returning any data.
+				// You can also set headers or whatever
 				return { hello: 'world', random: this.computedValue + this.anotherValue };
 		}
 
 		post() {
-			// Our Ping controller will first get to the constructor, then to the before() method,
+			// Ping controller will get to the constructor, then to the before() method,
 			// and depending on this.request.method continue with the corresponding method
 			if(this.body && this.body.ping === true) {
 				this.status = 200;
