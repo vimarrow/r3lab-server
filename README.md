@@ -22,37 +22,37 @@ $ npm install r3lab-server
 const { Server, Route } = require('r3lab-server');
 
 class Ping extends Route {
-		constructor(...args) {
-				super(...args);
-		}
-		before() {
-			// Before can be used as a middleware
-			this.computedValue = Math.random();
-			// Do stuff like checking credentials or validating this.body / this.query
-			this.headers = { 'Content-Type': 'application/json' };
-			return true;
-			// If there is no need to go to the next method you can return false
-		}
-		get() {
-			this.anotherValue = Math.random();
-			// Do the GET logic here.
-			this.status = 200;
-			// set the status of the request before returning any data.
-			// You can also set headers or whatever
-			return { hello: 'world', random: this.computedValue + this.anotherValue };
-		}
+	constructor(...args) {
+			super(...args);
+	}
+	before() {
+		// Before can be used as a middleware
+		this.computedValue = Math.random();
+		// Do stuff like checking credentials or validating this.body / this.query
+		this.headers = { 'Content-Type': 'application/json' };
+		return true;
+		// If there is no need to go to the next method you can return false
+	}
+	get() {
+		this.anotherValue = Math.random();
+		// Do the GET logic here.
+		this.status = 200;
+		// set the status of the request before returning any data.
+		// You can also set headers or whatever
+		return { hello: 'world', random: this.computedValue + this.anotherValue };
+	}
 
-		post() {
-			// Ping controller will get to the constructor, then to the before() method,
-			// and depending on this.request.method continue with the corresponding method
-			if(this.body && this.body.ping === true) {
-				this.status = 200;
-				return { response: 'pong' };
-			} else {
-				this.status = 400;
-				return { response: 'did not get a ping :(' };
-			}
+	post() {
+		// Ping controller will get to the constructor, then to the before() method,
+		// and depending on this.request.method continue with the corresponding method
+		if(this.body && this.body.ping === true) {
+			this.status = 200;
+			return { response: 'pong' };
+		} else {
+			this.status = 400;
+			return { response: 'did not get a ping :(' };
 		}
+	}
 }
 
 const serverConfig = {
