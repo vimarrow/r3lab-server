@@ -1,6 +1,6 @@
 # R<sup>3</sup>lab Server
 
-Disclaimer: For now this is just a POC and it's not (yet) indented to be used in production!
+Disclaimer: For now this is just a POC and it's not (yet) intended to be used in production!
 
 R<sup>3</sup>lab Server aims to be an alternate web framework that will help you write server apps fast by:
  - offering a set of predefined methods to organise your logic into multiple lifecycles
@@ -23,7 +23,7 @@ const { Server, Route } = require('r3lab-server');
 
 class Ping extends Route {
 	constructor(...args) {
-			super(...args);
+		super(...args);
 	}
 	before() {
 		// Before can be used as a middleware
@@ -41,7 +41,6 @@ class Ping extends Route {
 		// You can also set headers or whatever
 		return { hello: 'world', random: this.computedValue + this.anotherValue };
 	}
-
 	post() {
 		// Ping controller will get to the constructor, then to the before() method,
 		// and depending on this.request.method continue with the corresponding method
@@ -52,6 +51,9 @@ class Ping extends Route {
 			this.status = 400;
 			return { response: 'did not get a ping :(' };
 		}
+	}
+	onError(err) {
+		//Handle Errors in this component
 	}
 }
 
