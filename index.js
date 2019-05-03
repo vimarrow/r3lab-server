@@ -7,19 +7,25 @@ function parseQueryString(urlQuery) {
 	return Object.keys(query).length ? JSON.parse(JSON.stringify(query)) : null;
 }
 
+const constants = {
+	DEFAULT_HEADERS: {'Content-Type': 'application/json'}
+}
+
 async function parseBodyData(req) {
 	const buf = await getRawBody(req);
 	return buf.length ? JSON.parse(buf) : null;
 }
 
-function serverCrash(code, err, req, res) {
-	console.error(err);
-	res.writeHead(code, { 'Content-Type': 'application/json' });
-	const strMsg = JSON.stringify({
-		error: err
-	});
-	res.write(strMsg);
-	res.end();
+class ServerError extends Error {
+	constructor(status, name, ...args) {
+		super(...args);
+		if (Error.captureStackTrace) {
+			Error.captureStackTrace(this, ServerError);
+		}
+		this.time = new Date().getTime();
+		this.name = name;
+		this.status = status;
+	}
 }
 
 class Route {
@@ -32,15 +38,27 @@ class Route {
 		this.query = query;
 	}
 
-	async before() {
+	__getName() {
+		const regex = /\[Function: (.{1,})\]/;
+		const results = this.constructor.toString().match(/class (.{1,}) extends/);
+		return results && results.length > 1 ? results[1] : "";
+};
+
+	before() {
 		return true;
 	}
 
 	onError(err) {
-		return serverCrash(500, err, this.req, this.res);
+		console.log(err);
+		this.status = err.status || 500;
+		this.headers = constants.DEFAULT_HEADERS;
+		return {
+			name: err.name,
+			message: err.message
+		}
 	}
 
-	_destroy() {
+	destroy() {
 		return Object.keys(this).forEach(key => delete this[key]);
 	}
 }
@@ -59,41 +77,47 @@ class Server {
 				const body = await parseBodyData(req);
 				const route = this.routes.find(route => route.path === url);
 				if (typeof route === 'undefined' || typeof route.controller === 'undefined') {
-					throw '404';
+					throw new ServerError(404, 'NotFound', `Route for ${req.method} ${url} was not found`);
 				}
+				const Controller = new route.controller({ req: {...req }, res: {...res }, query, body });
 				try {
-					const Controller = new route.controller({ req: {...req }, res: {...res }, query, body });
 					const next = await Controller.before();
 					if (typeof next !== 'boolean') {
-						throw `Invalid return of 'before()' middleware method on ${url}`;
+						throw new ServerError(500, 'IllegalTypeReturn', `Invalid return of 'before()' middleware method on ${url} in ${Controller.__getName()} `);
 					}
 					if (!next) {
-						Controller._destroy();
+						Controller.destroy();
 						return false;
 					}
 					const method = req.method.toLowerCase();
 					if (typeof Controller[method] === 'undefined') {
-						throw '404'
+						throw new ServerError(404, 'NotFound', `Route for ${req.method} ${url} was not found`);
 					}
 					const response = await Controller[method]();
 					res.writeHead(Controller.status, Controller.headers);
 					// TODO: Handle http2 SSE ?
 					res.end(JSON.stringify(response));
-					Controller._destroy();
+					Controller.destroy();
 				} catch (e) {
-					Controller.onError(e);
+					const response = await Controller.onError(e);
+					res.writeHead(Controller.status, Controller.headers);
+					const strMsg = JSON.stringify(response);
+					res.end(strMsg);
+					Controller.destroy();
+					return true;
 				}
 				return true;
 			} catch (err) {
-				switch (err) {
-					case '404':
-						serverCrash(404, `Route '${req.method}: ${req.url}' not found`, req, res);
-						break;
-					default:
-						serverCrash(500, err, req, res);
-						break;
-				}
+				console.error(err);
+				res.writeHead(err.status, constants.DEFAULT_HEADERS);
+				const strMsg = JSON.stringify({
+					message: err.message,
+					name: err.name
+				});
+				res.end(strMsg);
+				return true;
 			}
+			return true;
 		}).listen(port || 3000);
 	}
 }
