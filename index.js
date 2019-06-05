@@ -1,6 +1,7 @@
 const http = require('http');
 const querystring = require('querystring');
 const getRawBody = require('raw-body');
+const pathToRegexp = require('path-to-regexp');
 
 function parseQueryString(urlQuery) {
 	const query = querystring.parse(urlQuery);
@@ -25,36 +26,43 @@ class ServerError extends Error {
 		this.time = new Date().getTime();
 		this.name = name;
 		this.status = status;
+		this.isServerError = true;
 	}
 }
 
 class Route {
-	constructor({ req, res, body, query }) {
+	constructor({ req, res, body, query, params }) {
 		this.status = 200;
 		this.request = req;
 		this.response = res;
 		this.headers = {};
+		this.params = params;
 		this.body = body;
 		this.query = query;
 	}
 
 	__getName() {
-		const regex = /\[Function: (.{1,})\]/;
 		const results = this.constructor.toString().match(/class (.{1,}) extends/);
 		return results && results.length > 1 ? results[1] : "";
-};
+	};
 
-	before() {
-		return true;
-	}
+	before() {return true;}
+	beforeGET() {return true;}
+	beforeHEAD() {return true;}
+	beforePOST() {return true;}
+	beforePUT() {return true;}
+	beforeDELETE() {return true;}
+	beforeOPTIONS() {return true;}
+	beforePATCH() {return true;}
 
 	onError(err) {
-		console.log(err);
+		console.error(error);
 		this.status = err.status || 500;
 		this.headers = constants.DEFAULT_HEADERS;
 		return {
 			name: err.name,
-			message: err.message
+			message: err.message,
+			in: this.__getName()
 		}
 	}
 
@@ -65,7 +73,28 @@ class Route {
 
 class Server {
 	constructor(config) {
-		this.routes = config.routes || [];
+		this.routes = config.routes || {};
+	}
+
+	getRouteAndParams(url) {
+		let finalResult = {
+			route: undefined,
+			params: {}
+		};
+
+		Object.keys(this.routes).find(confUrl => {
+			const keys = [];
+			const urlRegexp = pathToRegexp(confUrl, keys);
+			const result = urlRegexp.exec(url);
+			if(result && result.length){
+				finalResult.route = this.routes[confUrl];
+				for(let i = 0; i < keys.length; i++) {
+					finalResult.params[keys[i].name] = result[i + 1];
+				}
+			}
+		});
+
+		return finalResult;
 	}
 
 	listen(port) {
@@ -75,41 +104,35 @@ class Server {
 				const urlQuery = req.url.indexOf('?') !== -1 ? req.url.substring(req.url.indexOf('?') + 1) : url;
 				const query = parseQueryString(urlQuery);
 				const body = await parseBodyData(req);
-				const route = this.routes.find(route => route.path === url);
-				if (typeof route === 'undefined' || typeof route.controller === 'undefined') {
+				
+				const { route, params } = this.getRouteAndParams(url);
+				if (typeof route === 'undefined') {
 					throw new ServerError(404, 'NotFound', `Route for ${req.method} ${url} was not found`);
 				}
-				const Controller = new route.controller({ req: {...req }, res: {...res }, query, body });
+				const Controller = new route({ req: {...req }, res: {...res }, query, body, params });
 				try {
-					const next = await Controller.before();
-					if (typeof next !== 'boolean') {
-						throw new ServerError(500, 'IllegalTypeReturn', `Invalid return of 'before()' middleware method on ${url} in ${Controller.__getName()} `);
-					}
-					if (!next) {
-						Controller.destroy();
-						return false;
-					}
-					const method = req.method.toLowerCase();
-					if (typeof Controller[method] === 'undefined') {
+					const method = req.method;
+					await Controller.before();
+					await Controller[`before${method.toUpperCase()}`]();
+					if (typeof Controller[method.toLowerCase()] === 'undefined') {
 						throw new ServerError(404, 'NotFound', `Route for ${req.method} ${url} was not found`);
 					}
-					const response = await Controller[method]();
+					const response = await Controller[method.toLowerCase()]();
 					res.writeHead(Controller.status, Controller.headers);
 					// TODO: Handle http2 SSE ?
 					res.end(JSON.stringify(response));
 					Controller.destroy();
 				} catch (e) {
 					const response = await Controller.onError(e);
-					res.writeHead(Controller.status, Controller.headers);
+					res.writeHead(Controller.status || 500, Controller.headers || constants.DEFAULT_HEADERS);
 					const strMsg = JSON.stringify(response);
 					res.end(strMsg);
 					Controller.destroy();
-					return true;
 				}
 				return true;
 			} catch (err) {
-				console.error(err);
-				res.writeHead(err.status, constants.DEFAULT_HEADERS);
+				console.error(error);
+				res.writeHead(err.status || 500, constants.DEFAULT_HEADERS);
 				const strMsg = JSON.stringify({
 					message: err.message,
 					name: err.name
@@ -117,12 +140,12 @@ class Server {
 				res.end(strMsg);
 				return true;
 			}
-			return true;
 		}).listen(port || 3000);
 	}
 }
 
 module.exports = {
 	Server: Server,
-	Route: Route
+	Route: Route,
+	ServerError: (...args) => new ServerError(...args)
 };

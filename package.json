@@ -17,6 +17,7 @@
 		"nodejs"
 	],
 	"dependencies": {
+		"path-to-regexp": "^3.0.0",
 		"raw-body": "^2.3.3"
 	},
 	"devDependencies": {
