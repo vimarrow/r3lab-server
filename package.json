@@ -1,6 +1,6 @@
 {
 	"name": "r3lab-server",
-	"version": "0.0.4",
+	"version": "0.1.0",
 	"description": "A nodejs webserver",
 	"author": "Andrei Bratuleanu <bratuleanu21@gmail.com>",
 	"license": "ISC",
