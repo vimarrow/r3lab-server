@@ -19,51 +19,73 @@ $ npm install r3lab-server
 ## Hello R<sup>3</sup>lab
 
 ```js
-const { Server, Route } = require('r3lab-server');
+const { Server, Route, ServerError } = require('r3lab-server');
 
-class Ping extends Route {
-	constructor(...args) {
+class PingRoute extends Route {
+	constructor(...args){
 		super(...args);
+		// If it got here a request for /ping/:id? was received.
 	}
+
 	before() {
-		// Before can be used as a middleware
-		this.computedValue = Math.random();
-		// Do stuff like checking credentials or validating this.body / this.query
-		this.headers = { 'Content-Type': 'application/json' };
-		return true;
-		// If there is no need to go to the next method you can return false
+		// you can place anything that needs to be run regardless of request method
+		// setting CORS for ex.
 	}
-	get() {
-		this.anotherValue = Math.random();
-		// Do the GET logic here.
-		this.status = 200;
-		// set the status of the request before returning any data.
-		// You can also set headers or whatever
-		return { hello: 'world', random: this.computedValue + this.anotherValue };
+
+	async isValidPayload() { 
+		// just a custom validation method. 
+		// not part of r3lab
+		const isValid = await externalAsyncValidationFunction(this.body);
+		return typeof this.body.showPing === 'boolean' && isValid;
 	}
-	post() {
-		// Ping controller will get to the constructor, then to the before() method,
-		// and depending on this.request.method continue with the corresponding method
-		if(this.body && this.body.ping === true) {
-			this.status = 200;
-			return { response: 'pong' };
+
+	async beforePOST() {
+		// just like before but only runs for POST methods
+		// can be used for validations
+		if(await this.isValidPayload()){
+			return "is doesn't really matter what";
 		} else {
-			this.status = 400;
-			return { response: 'did not get a ping :(' };
-		}
+			throw ServerError(400, 'Bad Request', 'Invalid Payload. showPing needs to be boolean.');
+		};
 	}
-	onError(err) {
-		//Handle Errors in this component
+
+	get() {
+		// route logic like getting data from a db
+		this.status = 200;
+		console.log(this.query, this.body, this.params);
+		return {
+			ping: true,
+			id: this.params.id
+		};
 	}
+
+	post() {
+		this.status = 200;
+		return {
+			showPing: this.body.showPing
+		};
+	}
+
+	onError(error) {
+		// error is instance of ServerError
+		// internally I do this:
+		console.error(error);
+		this.status = error.status || 500;
+		return {
+			name: error.name,
+			message: error.message,
+			in: this.__getName()
+		};
+		// I strongly recommend to use it
+	}
+
 }
 
 const serverConfig = {
-	// can also add other configs as env
-	routes: [{
-		path: '/ping',
-		// set the URL and assign a controller
-		controller: require('./services/Ping')
-	}]
+	routes: {
+		// supports path params like /api/:foo/:bar?
+		'/ping/:id?': PingRoute
+	}
 };
 
 const app = new Server(serverConfig);
