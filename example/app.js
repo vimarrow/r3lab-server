@@ -4,44 +4,30 @@ class PingRoute extends Route {
 	constructor(...args){
 		super(...args);
 	}
-
 	before() {
-		// nothing to do here
+		this.headers = {'Content-Type': 'application/json'};
 	}
-
-	isValidPayload() { 
-		// just a custom validation method. 
-		// not part of r3lab
-		return typeof this.body.showPing === 'boolean';
+	isValidPayload() {
+		const keys = Object.keys(this.body);
+		for(let i=0; i<keys.length; i++) {
+			if(typeof this.body[keys[i]] !== 'boolean') {
+				return false;
+			}
+		}
+		return true;
 	}
-
 	beforePOST() {
-		if(this.isValidPayload()){
-			return "is doesn't really matter what";
-		} else {
-			throw ServerError(400, 'Bad Request', 'invalid Payload. showPing needs to be boolean.');
+		if(!this.isValidPayload()){
+			throw ServerError(400, 'validation', 'All items must have boolean type');
 		};
 	}
-
-	get() {
-		this.status = 200;
-		console.log(this.query, this.body, this.params);
-		return {
-			ping: true,
-			id: this.params.id
-		};
-	}
-
 	post() {
 		this.status = 200;
 		return {
-			showPing: this.body.showPing
+			...this.body
 		};
 	}
-
 	onError(error) {
-		// error is instance of ServerError
-		// internally I do this:
 		console.error(error);
 		this.status = error.status || 500;
 		return {
@@ -50,9 +36,7 @@ class PingRoute extends Route {
 			in: this.__getName()
 		};
 	}
-
 }
-
 const serverConfig = {
 	routes: {
 		'/ping/:id?': PingRoute
@@ -60,5 +44,4 @@ const serverConfig = {
 };
 
 const app = new Server(serverConfig);
-
 app.listen(8080);
