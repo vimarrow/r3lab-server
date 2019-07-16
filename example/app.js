@@ -1,4 +1,5 @@
 const { Server, Route, ServerError } = require('../index.js');
+const Redis = require('ioredis');
 
 class PingRoute extends Route {
 	constructor(...args){
@@ -8,7 +9,7 @@ class PingRoute extends Route {
 		this.headers = {'Content-Type': 'application/json'};
 	}
 	isValidPayload() {
-		const keys = Object.keys(this.body);
+		const keys = this.body ? Object.keys(this.body) : [];
 		for(let i=0; i<keys.length; i++) {
 			if(typeof this.body[keys[i]] !== 'boolean') {
 				return false;
@@ -21,11 +22,21 @@ class PingRoute extends Route {
 			throw ServerError(400, 'validation', 'All items must have boolean type');
 		};
 	}
-	post() {
+	async post() {
 		this.status = 200;
+		await this.db.set('pingStatus', this.body.pingStatus);
 		return {
 			...this.body
 		};
+	}
+	async get() {
+		try {
+			const pingStatus = await this.db.get('pingStatus');
+			this.status = 200;
+			return {pingStatus};
+		} catch (err) {
+			throw ServerError(500, ...err);
+		}
 	}
 	onError(error) {
 		console.error(error);
@@ -38,6 +49,7 @@ class PingRoute extends Route {
 	}
 }
 const serverConfig = {
+	db: new Redis(),
 	routes: {
 		'/ping/:id?': PingRoute
 	}

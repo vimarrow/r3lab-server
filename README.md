@@ -51,7 +51,7 @@ class PingRoute extends Route {
 
 	get() {
 		// route logic like getting data from a db
-		this.status = 200;
+		this.status = 200; //default is 200, you can ommit;
 		console.log(this.query, this.body, this.params);
 		return {
 			ping: true,
@@ -59,8 +59,8 @@ class PingRoute extends Route {
 		};
 	}
 
-	post() {
-		this.status = 200;
+	async post() {
+		await this.db.set('showPing', this.body.showPing); // set something in DB
 		return {
 			showPing: this.body.showPing
 		};
@@ -82,6 +82,7 @@ class PingRoute extends Route {
 }
 
 const serverConfig = {
+	db: new Redis(), //you can pass any db object you want to use. Just simply access this.db
 	routes: {
 		// supports path params like /api/:foo/:bar?
 		'/ping/:id?': PingRoute
